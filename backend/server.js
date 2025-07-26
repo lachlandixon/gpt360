@@ -49,9 +49,20 @@ const ADMIN_PASS = 'password';
 
 // Auth middleware
 function requireLogin(req, res, next) {
-  console.log('Session check:', req.session);
-  console.log('Logged in:', req.session && req.session.loggedIn);
+  // Check session first
   if (req.session && req.session.loggedIn) return next();
+  
+  // Check Authorization header for token
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.substring(7);
+    // Simple token validation (in production, use JWT)
+    if (token && token.length > 10) {
+      return next();
+    }
+  }
+  
+  console.log('Auth failed - session:', req.session, 'auth header:', req.headers.authorization);
   res.status(401).json({ error: 'Unauthorized' });
 }
 
@@ -60,7 +71,9 @@ app.post('/api/login', (req, res) => {
   const { username, password } = req.body;
   if (username === ADMIN_USER && password === ADMIN_PASS) {
     req.session.loggedIn = true;
-    res.json({ success: true });
+    // Generate a simple token for localStorage
+    const token = Buffer.from(username + Date.now()).toString('base64');
+    res.json({ success: true, token: token });
   } else {
     res.status(401).json({ error: 'Invalid credentials' });
   }

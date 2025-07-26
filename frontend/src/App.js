@@ -14,9 +14,14 @@ function App() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    fetch(`${API}/status`, { credentials: 'include' })
-      .then(res => res.json())
-      .then(data => setLoggedIn(data.loggedIn));
+    const token = localStorage.getItem('authToken');
+    if (token) {
+      setLoggedIn(true);
+    } else {
+      fetch(`${API}/status`, { credentials: 'include' })
+        .then(res => res.json())
+        .then(data => setLoggedIn(data.loggedIn));
+    }
   }, []);
 
   const handleLogin = async (e) => {
@@ -31,6 +36,8 @@ function App() {
         body: JSON.stringify({ username, password })
       });
       if (res.ok) {
+        const data = await res.json();
+        localStorage.setItem('authToken', data.token);
         setLoggedIn(true);
       } else {
         const data = await res.json();
@@ -44,6 +51,7 @@ function App() {
 
   const handleLogout = async () => {
     await fetch(`${API}/logout`, { method: 'POST', credentials: 'include' });
+    localStorage.removeItem('authToken');
     setLoggedIn(false);
     setUploaded(false);
     setDeployUrl('');
@@ -56,10 +64,18 @@ function App() {
     setLoading(true);
     const formData = new FormData();
     formData.append('image', image);
+    
+    const token = localStorage.getItem('authToken');
+    const headers = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
     try {
       const res = await fetch(`${API}/upload`, {
         method: 'POST',
         credentials: 'include',
+        headers,
         body: formData
       });
       if (res.ok) {
@@ -77,10 +93,18 @@ function App() {
   const handleDeploy = async () => {
     setError('');
     setLoading(true);
+    
+    const token = localStorage.getItem('authToken');
+    const headers = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
     try {
       const res = await fetch(`${API}/deploy`, {
         method: 'POST',
         credentials: 'include',
+        headers,
       });
       if (res.ok) {
         const data = await res.json();
