@@ -5,23 +5,20 @@ const cors = require('cors');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
 const fs = require('fs');
-const cloudinary = require('cloudinary').v2;
-const { CloudinaryStorage } = require('multer-storage-cloudinary');
+
+// ensure the uploads directory exists
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
 
 const app = express();
 const PORT = 4000;
 
-// Cloudinary configuration
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'demo',
-  api_key: process.env.CLOUDINARY_API_KEY || 'demo',
-  api_secret: process.env.CLOUDINARY_API_SECRET || 'demo'
-});
-
-// Use local storage for now (will be replaced with Cloudinary)
+// Multer storage config using uploadsDir
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, 'uploads/');
+    cb(null, uploadsDir);
   },
   filename: function (req, file, cb) {
     cb(null, Date.now() + '-' + file.originalname);
@@ -37,22 +34,21 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Session setup
+// trust the Render proxy so secure cookies work
+app.set('trust proxy', 1);
+
+// Session setup for cross-site cookies
 app.use(
   session({
     secret: 'supersecret',
-    resave: true,
-    saveUninitialized: true,
+    resave: false,
+    saveUninitialized: false,
     cookie: { 
-      secure: true,           // must be true for HTTPS
-      sameSite: 'none',       // must be 'none' for cross-site cookies
-      httpOnly: false,        // allow JavaScript access
-      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+      secure: true,
+      sameSite: 'none'
     }
   })
 );
-
-// Multer setup for file uploads (using local storage for now)
 
 // Hardcoded admin credentials
 const ADMIN_USER = 'admin';
@@ -60,20 +56,15 @@ const ADMIN_PASS = 'password';
 
 // Auth middleware
 function requireLogin(req, res, next) {
-  // Check session first
   if (req.session && req.session.loggedIn) return next();
-  
   // Check Authorization header for token
   const authHeader = req.headers.authorization;
   if (authHeader && authHeader.startsWith('Bearer ')) {
     const token = authHeader.substring(7);
-    // Simple token validation (in production, use JWT)
     if (token && token.length > 10) {
       return next();
     }
   }
-  
-  console.log('Auth failed - session:', req.session, 'auth header:', req.headers.authorization);
   res.status(401).json({ error: 'Unauthorized' });
 }
 
@@ -82,7 +73,6 @@ app.post('/api/login', (req, res) => {
   const { username, password } = req.body;
   if (username === ADMIN_USER && password === ADMIN_PASS) {
     req.session.loggedIn = true;
-    // Generate a simple token for localStorage
     const token = Buffer.from(username + Date.now()).toString('base64');
     res.json({ success: true, token: token });
   } else {
@@ -118,7 +108,7 @@ app.post('/api/deploy', requireLogin, (req, res) => {
   fs.mkdirSync(staticDir, { recursive: true });
   // Copy image
   fs.copyFileSync(
-    path.join(__dirname, 'uploads', uploadedImage),
+    path.join(uploadsDir, uploadedImage),
     path.join(staticDir, uploadedImage)
   );
   // Generate viewer HTML
