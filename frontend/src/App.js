@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 
-const API = 'http://localhost:4000/api'; // Change this to your backend URL when deployed
+const API = 'https://gpt360.onrender.com/api';
+ // Change this to your backend URL when deployed
 
 function App() {
   const [loggedIn, setLoggedIn] = useState(false);
