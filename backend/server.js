@@ -9,8 +9,11 @@ const fs = require('fs');
 const app = express();
 const PORT = 4000;
 
-// CORS for frontend dev
-app.use(cors({ origin: 'http://localhost:3000', credentials: true }));
+// CORS for frontend dev and production
+app.use(cors({ 
+  origin: ['http://localhost:3000', 'https://gpt360.vercel.app'], 
+  credentials: true 
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
