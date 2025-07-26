@@ -21,11 +21,13 @@ app.use(express.urlencoded({ extended: true }));
 app.use(
   session({
     secret: 'supersecret',
-    resave: false,
-    saveUninitialized: false,
+    resave: true,
+    saveUninitialized: true,
     cookie: { 
       secure: true,           // must be true for HTTPS
-      sameSite: 'none'        // must be 'none' for cross-site cookies
+      sameSite: 'none',       // must be 'none' for cross-site cookies
+      httpOnly: false,        // allow JavaScript access
+      maxAge: 24 * 60 * 60 * 1000 // 24 hours
     }
   })
 );
@@ -47,6 +49,8 @@ const ADMIN_PASS = 'password';
 
 // Auth middleware
 function requireLogin(req, res, next) {
+  console.log('Session check:', req.session);
+  console.log('Logged in:', req.session && req.session.loggedIn);
   if (req.session && req.session.loggedIn) return next();
   res.status(401).json({ error: 'Unauthorized' });
 }
