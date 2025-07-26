@@ -95,8 +95,14 @@ app.get('/api/status', (req, res) => {
 // Upload endpoint
 app.post('/api/upload', requireLogin, upload.single('image'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+
+  // store the filename on the session
   req.session.uploadedImage = req.file.filename;
-  res.json({ filename: req.file.filename });
+
+  // explicitly save the session before sending the response
+  req.session.save(() => {
+    res.json({ filename: req.file.filename });
+  });
 });
 
 // Deploy endpoint
