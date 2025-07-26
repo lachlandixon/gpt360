@@ -23,7 +23,10 @@ app.use(
     secret: 'supersecret',
     resave: false,
     saveUninitialized: false,
-    cookie: { secure: false }, // set to true if using HTTPS
+    cookie: { 
+      secure: true,           // must be true for HTTPS
+      sameSite: 'none'        // must be 'none' for cross-site cookies
+    }
   })
 );
 
